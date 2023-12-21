@@ -1,0 +1,9 @@
+2023-12-19 22:18:18,201 - urllib3.util.retry - DEBUG - Converted retries value: 3 -> Retry(total=3, connect=None, read=None, redirect=None, status=None)
+2023-12-19 22:18:18,220 - google.auth.transport.requests - DEBUG - Making request: POST https://oauth2.googleapis.com/token
+2023-12-19 22:18:18,221 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): oauth2.googleapis.com:443
+2023-12-19 22:18:18,537 - urllib3.connectionpool - DEBUG - https://oauth2.googleapis.com:443 "POST /token HTTP/1.1" 200 None
+2023-12-19 22:18:18,540 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): sheets.googleapis.com:443
+2023-12-19 22:18:19,744 - urllib3.connectionpool - DEBUG - https://sheets.googleapis.com:443 "GET /v4/spreadsheets/1NY54zW4Z4JWmdG0kcm3lBLXOhzYiuBiqKB9X1Fen0LU?includeGridData=false HTTP/1.1" 200 None
+2023-12-19 22:18:20,213 - urllib3.connectionpool - DEBUG - https://sheets.googleapis.com:443 "GET /v4/spreadsheets/1NY54zW4Z4JWmdG0kcm3lBLXOhzYiuBiqKB9X1Fen0LU?includeGridData=false HTTP/1.1" 200 None
+2023-12-19 22:18:20,963 - urllib3.connectionpool - DEBUG - https://sheets.googleapis.com:443 "GET /v4/spreadsheets/1TXDrfibGpR9d5GAuOqVD4pOr2K4gyky1Doaubejb-EA?includeGridData=false HTTP/1.1" 200 None
+2023-12-19 22:18:21,417 - urllib3.connectionpool - DEBUG - https://sheets.googleapis.com:443 "GET /v4/spreadsheets/1TXDrfibGpR9d5GAuOqVD4pOr2K4gyky1Doaubejb-EA?includeGridData=false HTTP/1.1" 200 None

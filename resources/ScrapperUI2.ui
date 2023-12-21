@@ -1,0 +1,372 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Dialog</class>
+ <widget class="QDialog" name="Dialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1001</width>
+    <height>883</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Digiklap - Web Scraper UI</string>
+  </property>
+  <widget class="QPlainTextEdit" name="configFileInputBox">
+   <property name="geometry">
+    <rect>
+     <x>150</x>
+     <y>100</y>
+     <width>741</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Path to the config file</string>
+   </property>
+  </widget>
+  <widget class="QRadioButton" name="selectByProductBtn">
+   <property name="geometry">
+    <rect>
+     <x>150</x>
+     <y>150</y>
+     <width>151</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Enter product details manually</string>
+   </property>
+   <property name="text">
+    <string>Select By Product</string>
+   </property>
+  </widget>
+  <widget class="QRadioButton" name="selectByConfigBtn">
+   <property name="geometry">
+    <rect>
+     <x>150</x>
+     <y>70</y>
+     <width>191</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Select the predefined products from the config file</string>
+   </property>
+   <property name="text">
+    <string>Select By Config file</string>
+   </property>
+  </widget>
+  <widget class="QPlainTextEdit" name="productName1">
+   <property name="geometry">
+    <rect>
+     <x>150</x>
+     <y>180</y>
+     <width>181</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Provide a Product name (for your ref. only)</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="configLabel">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>100</y>
+     <width>151</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Config File Location</string>
+   </property>
+  </widget>
+  <widget class="QPlainTextEdit" name="productName2">
+   <property name="geometry">
+    <rect>
+     <x>150</x>
+     <y>220</y>
+     <width>181</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Provide a Product name (for your ref. only)</string>
+   </property>
+  </widget>
+  <widget class="QPlainTextEdit" name="productName4">
+   <property name="geometry">
+    <rect>
+     <x>150</x>
+     <y>300</y>
+     <width>181</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Provide a Product name (for your ref. only)</string>
+   </property>
+  </widget>
+  <widget class="QPlainTextEdit" name="productName3">
+   <property name="geometry">
+    <rect>
+     <x>150</x>
+     <y>260</y>
+     <width>181</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Provide a Product name (for your ref. only)</string>
+   </property>
+  </widget>
+  <widget class="QPlainTextEdit" name="productName5">
+   <property name="geometry">
+    <rect>
+     <x>150</x>
+     <y>340</y>
+     <width>181</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Provide a Product name (for your ref. only)</string>
+   </property>
+  </widget>
+  <widget class="QPlainTextEdit" name="productLink1">
+   <property name="geometry">
+    <rect>
+     <x>340</x>
+     <y>180</y>
+     <width>551</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>provide a link of the review page</string>
+   </property>
+   <property name="autoFillBackground">
+    <bool>false</bool>
+   </property>
+  </widget>
+  <widget class="QPlainTextEdit" name="productLink2">
+   <property name="geometry">
+    <rect>
+     <x>340</x>
+     <y>220</y>
+     <width>551</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>provide a link of the review page</string>
+   </property>
+  </widget>
+  <widget class="QPlainTextEdit" name="productLink3">
+   <property name="geometry">
+    <rect>
+     <x>340</x>
+     <y>260</y>
+     <width>551</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>provide a link of the review page</string>
+   </property>
+  </widget>
+  <widget class="QPlainTextEdit" name="productLink4">
+   <property name="geometry">
+    <rect>
+     <x>340</x>
+     <y>300</y>
+     <width>551</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>provide a link of the review page</string>
+   </property>
+  </widget>
+  <widget class="QPlainTextEdit" name="productLink5">
+   <property name="geometry">
+    <rect>
+     <x>340</x>
+     <y>340</y>
+     <width>551</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>provide a link of the review page</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="configBrowse">
+   <property name="geometry">
+    <rect>
+     <x>900</x>
+     <y>100</y>
+     <width>89</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Browse for config file</string>
+   </property>
+   <property name="text">
+    <string>Browse</string>
+   </property>
+  </widget>
+  <widget class="QPlainTextEdit" name="outputFilePathInputBox">
+   <property name="geometry">
+    <rect>
+     <x>150</x>
+     <y>410</y>
+     <width>741</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Path to the output folder</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="outputFolderLabel">
+   <property name="geometry">
+    <rect>
+     <x>40</x>
+     <y>410</y>
+     <width>151</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Output Folder</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="outputFolderBrowse">
+   <property name="geometry">
+    <rect>
+     <x>900</x>
+     <y>410</y>
+     <width>89</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Browse for output folder</string>
+   </property>
+   <property name="text">
+    <string>Browse</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="consoleLabel">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>510</y>
+     <width>71</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Console:</string>
+   </property>
+  </widget>
+  <widget class="QTextEdit" name="consolTextEdit">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>540</y>
+     <width>981</width>
+     <height>331</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="scrappingBtn">
+   <property name="geometry">
+    <rect>
+     <x>450</x>
+     <y>470</y>
+     <width>111</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Start the Scrapper</string>
+   </property>
+   <property name="text">
+    <string>Start Scrapping</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="productlabel_1">
+   <property name="geometry">
+    <rect>
+     <x>70</x>
+     <y>190</y>
+     <width>67</width>
+     <height>17</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Product 1</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="productlabel_2">
+   <property name="geometry">
+    <rect>
+     <x>70</x>
+     <y>230</y>
+     <width>67</width>
+     <height>17</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Product 2</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="productlabel_3">
+   <property name="geometry">
+    <rect>
+     <x>70</x>
+     <y>270</y>
+     <width>67</width>
+     <height>17</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Product 3</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="productlabel_4">
+   <property name="geometry">
+    <rect>
+     <x>70</x>
+     <y>310</y>
+     <width>67</width>
+     <height>17</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Product 4</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="productlabel_5">
+   <property name="geometry">
+    <rect>
+     <x>70</x>
+     <y>350</y>
+     <width>67</width>
+     <height>17</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Product 5</string>
+   </property>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
