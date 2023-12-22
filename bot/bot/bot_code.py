@@ -11,65 +11,28 @@ import telegram.ext
 import logging
 import configparser
 
-
-import traceback
-
 # Create a ConfigParser object
-config = configparser.ConfigParser()
-config.read('config.ini')
-
-# Fetch configuration from ini file
-chat_id = int(config.get('Telegram', 'chat_id'))
-BotToken = config.get('Telegram', 'BotToken').strip()
-cust_sheet_url = config.get('GoogleSheets', 'customer_sheet').strip()
-cust_sheet_name = config.get('GoogleSheets', 'cust_sheet_name').strip()
-review_sheet_url = config.get('GoogleSheets', 'review_sheet').strip()
-review_sheet_name = config.get('GoogleSheets', 'review_sheet_name').strip()
-product_mapping_ini = config['ProductMapping']
-
-# Setup directories
-current_dir = str(os.getcwd())
-logdir = os.path.join(current_dir,'DebugLogs')
-get_time = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-logfile = os.path.join(logdir, f'Logs_{get_time}.log')
-if not os.path.exists(logdir):
-    os.makedirs(logdir)
-
-# Set up logging module
-logging.basicConfig(
-    filename=logfile,  # Specify the log file name
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-)
-log = logging.getLogger('SheetAutomationService')
-# console_handler = logging.StreamHandler()
-# console_handler.setLevel(logging.INFO)  # Adjust the log level if needed
-# log.addHandler(console_handler)
+def load_conf(configfile):
+    config = configparser.ConfigParser()
+    config.read(configfile)
+    return config
 
 # Set up CLI configuration
-while True:
-    global date_in, formatted_date
-    try:
-        date_in = input("Enter the date for which you want to fetch the data in (DD-MM-YYYY)\n Enter the date: ")
-        parsed_date = datetime.datetime.strptime(date_in, "%d-%m-%Y")
-        formatted_date = parsed_date.strftime("%Y-%m-%d")
-        break
-    except:
-        print("please check the date you've entered is valid and as per the 'DD-MM-YYYY' format\nPlease try again....")
-        print("~"*30)
-        time.sleep(1)
-        continue
+def get_date_frm_usr():
+    while True:
+        global date_in, formatted_date
+        try:
+            date_in = input("Enter the date for which you want to fetch the data in (DD-MM-YYYY)\n Enter the date: ")
+            parsed_date = datetime.datetime.strptime(date_in, "%d-%m-%Y")
+            formatted_date = parsed_date.strftime("%Y-%m-%d")
+            return formatted_date
 
-# Set up GoogleSheet configuration
-scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive',
-         'https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/spreadsheets']
-creds = ServiceAccountCredentials.from_json_keyfile_name('Cred.json', scope)
-client = gspread.authorize(creds)
-sheet = client.open_by_url(cust_sheet_url)
-customer_sheet_obj = sheet.worksheet(cust_sheet_name)
-review_sheet = client.open_by_url(review_sheet_url)
-review_sheet_obj = review_sheet.worksheet(review_sheet_name)
-review_file_xlsx = 'review_offline.xlsx'
+        except:
+            print("please check the date you've entered is valid and as per the 'DD-MM-YYYY' format\nPlease try again....")
+            print("~"*30)
+            time.sleep(1)
+            continue
+
 
 # Initialize marking indexes for batch update
 mark_review_cell = []
@@ -84,7 +47,7 @@ def map_product(product_mapping):
     return transformed_dict
 
 # Product mapping according to review sheet
-product_mapping = map_product(product_mapping_ini)
+
 
 def find_entry_in_excel(dataframe, search_value, column_to_search, excel_file_path):
     # Load the main Excel file
@@ -102,22 +65,22 @@ def find_entry_in_excel(dataframe, search_value, column_to_search, excel_file_pa
     workbook.close()
     if cell_index:
         # return cell index
-        log.info(f"Cell index {cell_index}")
+        #log.info(f"Cell index {cell_index}")
         return cell_index
     else:
         # log the error
-        log.info(f"The entry '{search_value}' was not found in the Excel file.")
+        #log.info(f"The entry '{search_value}' was not found in the Excel file.")
         return f"The entry '{search_value}' was not found in the Excel file."
 
 def save_offline(sheet_obj, filename):
     # Get all values in the worksheet
     data = sheet_obj.get_all_values()
     df = pd.DataFrame(data[1:], columns=data[0])
-
+    current_dir = os.getcwd()
     # Save the data to an Excel file (xlsx format)
     output_path = os.path.join(current_dir,filename)
     df.to_excel(str(output_path), index=False, engine='openpyxl')
-    log.info(f"review file created offline {output_path}")
+    #log.info(f"review file created offline {output_path}")
     return output_path
 
 def read_worksheet(customersheet_obj):
@@ -125,7 +88,7 @@ def read_worksheet(customersheet_obj):
     data_frame = pd.DataFrame(data[1:], columns=data[0])
     # get filtered dataframe based of MArking 'Done'
     filtered_data_frame = data_frame[data_frame['Marked'] != 'Done']
-    log.info(f"Filtered Customer Data for 'Done'")
+    #log.info(f"Filtered Customer Data for 'Done'")
     return filtered_data_frame
 
 def filter_data_on_date(df, date):
@@ -137,15 +100,15 @@ def filter_data_on_date(df, date):
     filtered_df = df[df['Delivery date for reviews'] == target_delivery_date]
     if filtered_df.empty:
         # No customer found or left to mark
-        log.info(f"No Customer data for given date {date}")
+        #log.info(f"No Customer data for given date {date}")
         return None
     else:
         # return filtered dataframe based on date
-        log.info(f"Filtered customer data for given date {date}")
+        #log.info(f"Filtered customer data for given date {date}")
         return filtered_df
 
 # ------------------------------------------------ Not actively used  -----------------------------------------------
-def fetch_review(prod, reviewsheet_obj):
+def fetch_review(prod, reviewsheet_obj, product_mapping):
     '''
     Not being used in the code, just for future extention based on total online updation on google sheet
     '''
@@ -166,13 +129,13 @@ def fetch_review(prod, reviewsheet_obj):
         if marking != "Done":
             # print(f"got the value for {column}{i}")
             review = reviewsheet_obj.acell(f"{column}{i}").value
-            log.info(f"Unique review feteched for {product} online")
+            #log.info(f"Unique review feteched for {product} online")
             return review
         else:
             continue
 # ------------------------------------------------------------------------------------------------
 
-def fetch_review_offline(prod, excel_file_path):
+def fetch_review_offline(prod, excel_file_path, product_mapping):
     product = prod.capitalize().strip()
     # Load the Excel workbook
     workbook = openpyxl.load_workbook(excel_file_path)
@@ -188,7 +151,7 @@ def fetch_review_offline(prod, excel_file_path):
         # Check if the marking is not "Done" before using the review
         if marking != "Done" and f"{marking_column}{i}" not in mark_review_cell:
             review = worksheet[f"{column}{i}"].value
-            log.info(f"Unique review feteched for {product} from {review_file_xlsx}")
+            #log.info(f"Unique review feteched for {product}")
             # Check if the review is not empty
             if review is not None:
                 # is_marked = mark_cell_done(marking_column, i, worksheet)
@@ -196,22 +159,21 @@ def fetch_review_offline(prod, excel_file_path):
                 worksheet[f"{marking_column}{i}"].value = "Done"
                 workbook.save(excel_file_path)
                 workbook.close()
-                log.info(f"review fetched for {product}")
+                #log.info(f"review fetched for {product}")
                 # return review for given product
                 return review
             else:
-                log.error(f"No unique review left in the sheet for product: {product} or product not found in the review sheet.\n Make sure colums are mapped correctly in config file for the product: {product}")
+                #log.error(f"No unique review left in the sheet for product: {product} or product not found in the review sheet.\n Make sure colums are mapped correctly in config file for the product: {product}")
                 print(f"No unique review left in the sheet for product: {product} or product not found in the review sheet.\n Make sure colums are mapped correctly in config file for the product: {product}")
                 return f"No unique review left in the sheet for product: {product} or product not found in the review sheet.\n Make sure colums are mapped correctly in config file for the product: {product}"
         else:
             # Continue looping if previous review is already marked
             continue
 
-async def send(chat, msg):
+async def send(chat, msg, BotToken):
     await telegram.Bot(BotToken).sendMessage(chat_id=chat, text=msg)
 
-counter = 0
-def send_review(customer_name, product_review_dict, mobile_num, point_of_contact, date_, order_id):
+def send_review(customer_name, product_review_dict, mobile_num, point_of_contact, date_, order_id, chat_id, BotToken):
     global counter
     # Function to send the review to the given chat id along with the formated review
     data1 = customer_name
@@ -222,39 +184,40 @@ def send_review(customer_name, product_review_dict, mobile_num, point_of_contact
     # Send the message
     # print(f"counter: {counter}")
     counter += 1
-    log.info(f"counter {counter}")
+    #log.info(f"counter {counter}")
     if counter == 19:
         print("~" * 100)
         print("Cool down period of 30 Sec...")
         print("~" * 100)
         time.sleep(30)
-        log.info("Cool down period of 30 Sec...")
+        #log.info("Cool down period of 30 Sec...")
         counter = 0
         # print(f"count = {counter}", flush=True)
-        log.info(f"counter {counter}")
+        #log.info(f"counter {counter}")
 
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(send(chat=chat_id, msg=str(formatted_data_f)))
+    loop.run_until_complete(send(chat=chat_id, msg=str(formatted_data_f), BotToken=BotToken))
     for products in product_revs:
         counter += 1
-        log.info(f"counter {counter}")
+        #log.info(f"counter {counter}")
         if counter == 19:
             print("~" * 100)
             print("Cool down period of 30 Sec...")
             print("~" * 100)
             time.sleep(30)
-            log.info("Cool down period of 30 Sec...")
+            #log.info("Cool down period of 30 Sec...")
             counter = 0
             # print(f"count = {counter}", flush=True)
-            log.info(f"counter {counter}")
+            #log.info(f"counter {counter}")
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(send(chat=chat_id, msg=str(products)))
+        loop.run_until_complete(send(chat=chat_id, msg=str(products), BotToken=BotToken))
     # asyncio.run(send(chat=chat_id, msg=str(formatted_data_f)))
-    log.info(f"message sent to chat_id: {chat_id} for customer review")
+    #log.info(f"message sent to chat_id: {chat_id} for customer review")
 
-
-def fetch_all_product_review(filtered_df, reviewsheet_obj, date_, customersheet_obj):
-
+counter = 0
+def fetch_all_product_review(filtered_df, reviewsheet_obj, date_, customersheet_obj, review_file_xlsx, product_mapping, BotToken, chat_id):
+    global counter
+    print(chat_id)
     # Function to fetch all reviews
     filterd_df_dict = filtered_df
     # Download the review sheet
@@ -262,7 +225,7 @@ def fetch_all_product_review(filtered_df, reviewsheet_obj, date_, customersheet_
     # Iterate over the sheet for each product in filtered_df_dict
     for index in range(len(filterd_df_dict)):
         try:
-            # Fetch the various product details
+                # Fetch the various product details
             item = filterd_df_dict[index]
             item = dict(item)
             customer_name = item["Customer name"]
@@ -275,22 +238,22 @@ def fetch_all_product_review(filtered_df, reviewsheet_obj, date_, customersheet_
             for item in product_list:
                 prod_name = str(item.capitalize().strip())
                 # Fetches the product review
-                review_rec = fetch_review_offline(prod=prod_name, excel_file_path=offline_review_file)
+                review_rec = fetch_review_offline(prod=prod_name, excel_file_path=offline_review_file, product_mapping=product_mapping)
                 review_dict[prod_name] = review_rec
                 # Map the customer name to their review dictionary
             # Send the review
-            send_review(customer_name=customer_name, product_review_dict=review_dict, mobile_num=mobile_no, point_of_contact=point_of_contact, date_=date_, order_id=order_id)
+            send_review(customer_name=customer_name, product_review_dict=review_dict, mobile_num=mobile_no, point_of_contact=point_of_contact, date_=date_, order_id=order_id, BotToken=BotToken, chat_id=chat_id)
             time.sleep(0.5)
             # Get the customer index based on unique order id
             cust_index = get_customer_row_index(customersheet_obj=customersheet_obj, order_id=order_id)
             if cust_index is not None:
                 mark_customer_cell.append(f"K{cust_index}")
             else:
-                # print(f"customer index not found for {customer_name}")
-                log.error(f"customer index not found for {customer_name}")
+                print(f"customer index not found for {customer_name}")
+                #log.error(f"customer index not found for {customer_name}")
         except Exception as e:
             # traceback.print_exc()
-            log.error(f"func: [fetch_all_product_review] error:{e} caused unexpected exit")
+            #log.error(f"func: [fetch_all_product_review] error:{e} caused unexpected exit")
             print("#"*100)
             print(f"Error: {e}")
             print("#" * 100)
@@ -348,37 +311,66 @@ def convert_to_update_requests(cell_indexes):
         return [{'range': cell, 'values':[["Done"]]} for cell in cell_indexes]
     except Exception as e:
         # traceback.print_exc()
-        # print(f"func:[convert_to_update_requests] error: {e} caused unexpected exit ")
-        log.error(f"func:[convert_to_update_requests] error: {e} caused unexpected exit ")
+        print(f"func:[convert_to_update_requests] error: {e} caused unexpected exit ")
+        #log.error(f"func:[convert_to_update_requests] error: {e} caused unexpected exit ")
 
 def batch_update_cells(sheet, cell_updates, sheet_name):
     try:
         # Batch update according to JSON object passed
         sheet.batch_update(cell_updates)
-        log.info(f"Updated data for {sheet_name}")
+        #log.info(f"Updated data for {sheet_name}")
         # print(f"updated: {sheet_name}")
     except Exception as e:
         # traceback.print_exc()
-        # print(f"func:[batch_update_cells] error: {e} caused unexpected exit ")
-        log.error(f"func:[batch_update_cells] error: {e} caused unexpected exit ")
+        print(f"func:[batch_update_cells] error: {e} caused unexpected exit ")
+        #log.error(f"func:[batch_update_cells] error: {e} caused unexpected exit ")
+
+def format_date(date_in):
+    parsed_date = datetime.datetime.strptime(date_in, "%d-%m-%Y")
+    formatted_date = parsed_date.strftime("%Y-%m-%d")
+    return formatted_date
 
 # --------------------------------------------------------------------------------------------------------------------
-def main_bot(config, date_in):
+# Main code
+def main(config_file, date_in=None):
+    # print(config_file)
+    config = load_conf(config_file)
+    # config.read(config_file)
+    # Fetch configuration from ini file
+    chat_id = int(config.get('Telegram', 'chat_id'))
+    BotToken = config.get('Telegram', 'BotToken').strip()
+    cust_sheet_url = config.get('GoogleSheets', 'customer_sheet').strip()
+    cust_sheet_name = config.get('GoogleSheets', 'cust_sheet_name').strip()
+    review_sheet_url = config.get('GoogleSheets', 'review_sheet').strip()
+    review_sheet_name = config.get('GoogleSheets', 'review_sheet_name').strip()
+    product_mapping_ini = config['ProductMapping']
+    product_mapping = map_product(product_mapping_ini)
+
+    scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive',
+             'https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/spreadsheets']
+    creds = ServiceAccountCredentials.from_json_keyfile_name('Cred.json', scope)
+    client = gspread.authorize(creds)
+    sheet = client.open_by_url(cust_sheet_url)
+    customer_sheet_obj = sheet.worksheet(cust_sheet_name)
+    review_sheet = client.open_by_url(review_sheet_url)
+    review_sheet_obj = review_sheet.worksheet(review_sheet_name)
+    review_file_xlsx = 'review_offline.xlsx'
+    formatted_date = format_date(date_in)
     try:
         all_df = read_worksheet(customersheet_obj=customer_sheet_obj)
         filtered_df = filter_data_on_date(all_df, str(formatted_date))
         if filtered_df is None:
             loop = asyncio.get_event_loop()
-            loop.run_until_complete(send(chat=chat_id, msg=f"No Customer left for the given date: {date_in}\n or Date does not exists in the sheet"))
+            loop.run_until_complete(send(chat=chat_id, msg=f"No Customer left for the given date: {date_in}\n or Date does not exists in the sheet", BotToken=BotToken))
             # asyncio.run()
 
             print(f"No Customer left for the given date: {date_in} or Date does not exists in the sheet")
-            log.info(f"No Customer left for the given date: {date_in} or Date does not exists in the sheet")
+            #log.info(f"No Customer left for the given date: {date_in} or Date does not exists in the sheet")
             exit()
         filtered_df_dict = filtered_df.to_dict(orient='records')
-        fetch_all_product_review(filtered_df_dict, reviewsheet_obj=review_sheet_obj, date_=str(formatted_date), customersheet_obj=customer_sheet_obj)
-        log.info(f"review_cell markings {mark_review_cell}")
-        log.info(f"review_cell markings {mark_customer_cell}")
+        fetch_all_product_review(filtered_df_dict, reviewsheet_obj=review_sheet_obj, date_=str(formatted_date), customersheet_obj=customer_sheet_obj, BotToken=BotToken,chat_id=chat_id,product_mapping=product_mapping, review_file_xlsx=review_file_xlsx)
+        #log.info(f"review_cell markings {mark_review_cell}")
+        #log.info(f"review_cell markings {mark_customer_cell}")
 
         print("~" * 100)
         print("~"*30, "All data fetched","~"*30)
@@ -403,3 +395,30 @@ def main_bot(config, date_in):
         print(f"Update review sheet at index {mark_review_cell}")
         print(f"Update review sheet at index {mark_customer_cell}")
         os.remove(os.path.join(os.getcwd(), review_file_xlsx))
+
+
+def set_up_logger():
+    # Setup directories
+    current_dir = str(os.getcwd())
+    logdir = os.path.join(current_dir, 'DebugLogs')
+    get_time = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+    logfile = os.path.join(logdir, f'Logs_{get_time}.log')
+    if not os.path.exists(logdir):
+        os.makedirs(logdir)
+
+    # Set up logging module
+    logging.basicConfig(
+        filename=logfile,  # Specify the log file name
+        level=logging.DEBUG,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    )
+    log = logging.getLogger('SheetAutomationService')
+    return log
+
+if __name__ == '__main__':
+#     log = set_up_logger()
+#
+#     formatted_date_in = get_date_frm_usr()
+    main(config_file="config.ini", date_in="26-10-2023")
+
+
