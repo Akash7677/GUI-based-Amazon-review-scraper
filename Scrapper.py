@@ -1,4 +1,5 @@
 import configparser
+import json
 import os
 import re
 import time
@@ -8,7 +9,7 @@ from playwright_stealth import stealth_sync
 from selectolax.parser import HTMLParser
 import pandas as pd
 
-SBR_WS_CDP = 'proxy'
+SBR_WS_CDP = 'wss://brd-customer-hl_be765d4f-zone-scraping_browser1:hyoour9civ1c@brd.superproxy.io:9222'
 
 proxy_flag = False
 
@@ -16,10 +17,11 @@ review_body_css = '[data-hook="review-body"]'
 review_title_css = 'a[data-hook="review-title"]'
 review_ratings_css = 'i[data-hook="review-star-rating"] span'
 sign_in_page_locator = '#ap_email'
+logo = '#nav-logo-sprites'
 pg_in = 10
 retry_url = []
 test_url = 'https://www.amazon.in/ap/signin?openid.pape.max_auth_age=0&openid.return_to=https%3A%2F%2Fwww.amazon.in%2F%3Fref_%3Dnav_ya_signin&openid.identity=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.assoc_handle=inflex&openid.mode=checkid_setup&openid.claimed_id=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.ns=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0'
-# test_flag = True
+test_flag = False
 def get_html(page, page_no, url_, max_retries=3, initial_delay=2):
     global proxy_flag
     retries = 0
@@ -46,9 +48,10 @@ def get_html(page, page_no, url_, max_retries=3, initial_delay=2):
                     # print(new_url)
             page.goto(new_url)
             # check if got blocked and sign in page is shown
-            if page.is_visible(sign_in_page_locator):
-                print("Sign-in page detected. Starting the Proxy.")
-                # ----------------------- Testing retry mechenism-------------------------------
+            # if not page.is_visible(logo):
+            if not page.is_visible(logo):
+                print("Amazon blocked.... Starting the Proxy.")
+                # # ----------------------- Testing retry mechenism-------------------------------
                 # if not test_flag:
                 #     retry_url.append(
                 #         'https://www.amazon.in/product-reviews/B0B9BL9T4H/ref=cm_cr_arp_d_viewopt_sr?ie=UTF8&filterByStar=positive&reviewerType=all_reviews&pageNumber=3#reviews-filter-bar')
@@ -179,7 +182,7 @@ def extract_per_page(page, asin, url, product, output_folder):
         start_page = 1
     # iterate over pages for the review scrapping
     for pg in range(start_page, pg_in+1):
-        # ----------------- Testing retry mechenism ---------------
+        # # ----------------- Testing retry mechenism ---------------
         # if pg == 3 and test_flag:
         #     print("Test started")
         #     url = test_url
@@ -246,12 +249,26 @@ def run(product, url, asin, output_folder):
     print(f"Total review: {total_scrapped}")
 
 def parse_config(config_file):
-    config = configparser.ConfigParser()
-    config.read(config_file)
-    product_mapping = config["urls"]
-    # Map the product and URL
-    url_map = map_product(product_mapping)
-    return url_map
+    try:
+        with open(config_file, 'r') as file:
+            config_data = json.load(file)
+
+        if "urls" in config_data:
+            product_mapping = config_data["urls"]
+            # Map the product and URL
+            url_map = map_product(product_mapping)
+            return url_map
+        else:
+            print("Error: 'urls' key not found in the configuration.")
+            return None
+    except json.JSONDecodeError as e:
+        # Handle JSON decoding error
+        print(f"Error decoding JSON in config file: {e}")
+        return None
+    except Exception as e:
+        # Handle other types of errors
+        print(f"An unexpected error occurred: {e}")
+        return None
 
 def check_url(url_map):
     for prod, link in url_map.items():
@@ -280,8 +297,7 @@ def main(prod_map, output_folder=str(os.getcwd())):
     for prod, link in url_map.items():
         url, asin = format_url(str(link))
         if "[" and "'" in url:
-            url= url.strip("[").strip("]").strip("'")
-            print(f"This is url: {url}")
+            url = url.strip("[").strip("]").strip("'")
         run(product=prod, url=url, asin = asin, output_folder=output_folder)
         # if retry URL is found the run with retry URL
         if retry_url:
@@ -290,5 +306,5 @@ def main(prod_map, output_folder=str(os.getcwd())):
     return True
 
 if __name__ == "__main__":
-    url_map = parse_config('config.ini')
+    url_map = parse_config('config.json')
     main(url_map)

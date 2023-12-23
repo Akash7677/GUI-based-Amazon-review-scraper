@@ -54,7 +54,7 @@ class ReviewScraperGUI(QDialog):
         self.ui.consolTextEdit.append(message)
 
     def browse_config(self):
-        file_selected, _ = QFileDialog.getOpenFileName(self, "Select Config File", "", "Config Files (*.ini)")
+        file_selected, _ = QFileDialog.getOpenFileName(self, "Select Config File", "", "Config Files (*.json)")
         self.ui.configFileInputBox.setPlainText(file_selected)
 
     def browse_output(self):
@@ -94,7 +94,7 @@ class ReviewScraperGUI(QDialog):
 
                 if product_name and product_link:
                     at_least_one_product = True
-                    product_name_link_map[product_name] = [product_link]
+                    product_name_link_map[product_name] = product_link
 
             if not at_least_one_product:
                 print("Please provide at least one product name and link.")
@@ -121,7 +121,7 @@ def run_scrapper_and_paraphraser(config, output_folder):
         print("paraphrasing............")
         main_para(output_folder)
     else:
-        print("Some error occured in scrapper.... Not starting Paraphrasing...")
+        print("Some error occured in scrapper.... Not starting Paraphrasing....")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
