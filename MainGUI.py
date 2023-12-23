@@ -121,7 +121,7 @@ def run_scrapper_and_paraphraser(config, output_folder):
         print("paraphrasing............")
         main_para(output_folder)
     else:
-        print("Some error occured in scrapper.... Not starting Paraphrasing...")
+        print("Some error occured in scrapper.... Not starting Paraphrasing....")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

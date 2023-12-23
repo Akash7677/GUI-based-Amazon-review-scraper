@@ -50,15 +50,15 @@ def get_html(page, page_no, url_, max_retries=3, initial_delay=2):
             # check if got blocked and sign in page is shown
             # if not page.is_visible(logo):
             if not page.is_visible(logo):
-                print("Sign-in page detected. Starting the Proxy.")
-                # ----------------------- Testing retry mechenism-------------------------------
-                if not test_flag:
-                    retry_url.append(
-                        'https://www.amazon.in/product-reviews/B0B9BL9T4H/ref=cm_cr_arp_d_viewopt_sr?ie=UTF8&filterByStar=positive&reviewerType=all_reviews&pageNumber=3#reviews-filter-bar')
-                    print("URL appended forcefully")
-                    # print(f"URL : {retry_url[0]}")
-                else:
-                    retry_url.append(new_url)
+                print("Amazon blocked.... Starting the Proxy.")
+                # # ----------------------- Testing retry mechenism-------------------------------
+                # if not test_flag:
+                #     retry_url.append(
+                #         'https://www.amazon.in/product-reviews/B0B9BL9T4H/ref=cm_cr_arp_d_viewopt_sr?ie=UTF8&filterByStar=positive&reviewerType=all_reviews&pageNumber=3#reviews-filter-bar')
+                #     print("URL appended forcefully")
+                #     # print(f"URL : {retry_url[0]}")
+                # else:
+                #     retry_url.append(new_url)
 
                 # ----------------------- Testing retry mechenism -------------------------------
                 # append the url for the retry
@@ -182,11 +182,11 @@ def extract_per_page(page, asin, url, product, output_folder):
         start_page = 1
     # iterate over pages for the review scrapping
     for pg in range(start_page, pg_in+1):
-        # ----------------- Testing retry mechenism ---------------
-        if pg == 3 and test_flag:
-            print("Test started")
-            url = test_url
-            test_flag = False
+        # # ----------------- Testing retry mechenism ---------------
+        # if pg == 3 and test_flag:
+        #     print("Test started")
+        #     url = test_url
+        #     test_flag = False
         # # ----------------- Testing retry mechenism ---------------
         html = get_html(page, page_no=pg, url_=url)
         # stop execution is html page source is None
