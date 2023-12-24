@@ -5,9 +5,9 @@ import openpyxl
 import ai21
 import pandas as pd
 
-ai21.api_key = "iA8KLSIrCIPypWMzm0vSYzb2wf0GKLsT"
 
-def paraphrased_text(text_to_process):
+def paraphrased_text(text_to_process, API_key):
+    ai21.api_key = API_key
     max_retries = 5
     retry_delay = 60  # Initial delay in seconds
     retries = 0
@@ -42,7 +42,7 @@ def paraphrased_text(text_to_process):
         raise Exception(f"Failed to get a valid response after {max_retries} retries.")
 
 
-def process_excel_file(file_path):
+def process_excel_file(file_path, API_key):
     # global count
     # Load the Excel workbook
     workbook = openpyxl.load_workbook(file_path)
@@ -68,7 +68,7 @@ def process_excel_file(file_path):
             #     time.sleep(60)
             #     count = 0
             # Pass the content of column C to the paraphrased_text function
-            paraphrased = paraphrased_text(original_text)
+            paraphrased = paraphrased_text(original_text, API_key)
             rev_done += 1
             # print(f"writing to D{row_index}")
             # Save the output of the function in column D
@@ -134,7 +134,10 @@ def merge_revs(folder_path):
 
 
 # Specify the path to your Excel file
-def main_para(folder_path=str(os.getcwd())):
+def main_para(folder_path=str(os.getcwd()), API_key=None):
+    if API_key is None:
+        print("Please check your AI21 API key.....")
+        return
     # Get a list of all files in the specified folder
     files = os.listdir(folder_path)
     # Filter out only Excel files
@@ -148,8 +151,8 @@ def main_para(folder_path=str(os.getcwd())):
         # Build the full path to the Excel file
         excel_file_path = os.path.join(folder_path, excel_file)
         # Call the function to process the Excel file
-        process_excel_file(excel_file_path)
+        process_excel_file(excel_file_path, API_key)
     merge_revs(folder_path)
 
 if __name__ == "__main__":
-    merge_revs(folder_path='/home/vvdn/pythonProject/scrapper_ui/test')
+    main_para(folder_path=os.getcwd(), API_key=None)

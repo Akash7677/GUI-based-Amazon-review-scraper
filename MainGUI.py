@@ -1,3 +1,4 @@
+import json
 import os
 from PyQt5.QtGui import QTextCursor
 from PyQt5.QtWidgets import QDialog, QApplication, QFileDialog
@@ -114,14 +115,31 @@ class ReviewScraperGUI(QDialog):
         scraper_thread = Thread(target=run_scrapper_and_paraphraser, args=(url_map, output_folder))
         scraper_thread.start()
 
+def parse_creds(creds_file):
+    try:
+        with open(creds_file, 'r') as file:
+            creds_data = json.load(file)
+            ai21 = creds_data["ai21_API_key"]
+            proxy= creds_data["Proxy_url"]
+            # print(ai21, proxy)
+            return ai21, proxy
+    except json.JSONDecodeError as e:
+        print(f"Error decoding JSON in config file: {e}")
+        return None
+
 def run_scrapper_and_paraphraser(config, output_folder):
+    ai21, proxy = parse_creds('Credentials.json')
+    print(ai21, proxy)
+    if (ai21 is None) or (proxy is None):
+        print("please check your credentials for proxy or AI21 API......")
+        return
     print("Scrapping...............")
-    state_chk = run_scraper(config, output_folder)
+    state_chk = run_scraper(config, output_folder, proxy=proxy)
     if state_chk:
         print("paraphrasing............")
-        main_para(output_folder)
+        main_para(output_folder, API_key=ai21)
     else:
-        print("Some error occured in scrapper.... Not starting Paraphrasing....")
+        print("Some error occured in scrapper.... Not starting Paraphrasing...")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

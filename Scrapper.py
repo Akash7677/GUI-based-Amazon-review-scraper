@@ -203,7 +203,7 @@ def extract_per_page(page, asin, url, product, output_folder):
             break
 
 
-def run(product, url, asin, output_folder):
+def run(product, url, asin, output_folder, proxy):
     # start playwright instance
     pw = sync_playwright().start()
     # check if needs to run in proxy or normal
@@ -211,7 +211,7 @@ def run(product, url, asin, output_folder):
         # check if needs to start from where execution is stopped
         if retry_url:
             try:
-                browser = pw.chromium.connect_over_cdp(SBR_WS_CDP)
+                browser = pw.chromium.connect_over_cdp(proxy)
                 print("Proxy started")
                 page = browser.new_page()
                 stealth_sync(page)
@@ -225,7 +225,7 @@ def run(product, url, asin, output_folder):
         # Start normal operation in proxy mode
         else:
             try:
-                browser = pw.chromium.connect_over_cdp(SBR_WS_CDP)
+                browser = pw.chromium.connect_over_cdp(proxy)
                 page = browser.new_page()
                 stealth_sync(page)
                 extract_per_page(page, asin, url=url, product=product, output_folder=output_folder)
@@ -238,7 +238,7 @@ def run(product, url, asin, output_folder):
 
     # else keep running in Normal mode
     else:
-        browser = pw.chromium.launch(headless=True)
+        browser = pw.chromium.launch(headless=False)
         # browser = pw.chromium.launch()
         page = browser.new_page()
         stealth_sync(page)
@@ -280,7 +280,7 @@ def check_url(url_map):
             print("Please check URL(s) you provided. There might be some mistake")
             return False
 
-def main(prod_map, output_folder=str(os.getcwd())):
+def main(prod_map, output_folder=str(os.getcwd()), proxy=None):
     global total_scrapped
     url_map = prod_map
     current_date = datetime.datetime.now().date()
@@ -298,10 +298,10 @@ def main(prod_map, output_folder=str(os.getcwd())):
         url, asin = format_url(str(link))
         if "[" and "'" in url:
             url = url.strip("[").strip("]").strip("'")
-        run(product=prod, url=url, asin = asin, output_folder=output_folder)
+        run(product=prod, url=url, asin = asin, output_folder=output_folder, proxy=proxy)
         # if retry URL is found the run with retry URL
         if retry_url:
-            run(product=prod, url=retry_url[0], asin = asin, output_folder=output_folder)
+            run(product=prod, url=retry_url[0], asin = asin, output_folder=output_folder, proxy=proxy)
         total_scrapped = 0
     return True
 
