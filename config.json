@@ -1,6 +1,9 @@
 {
   "urls": {
-    "product 1": "Amazon url 1",
-    "product 2": "Amazon url 2"
-  }
+    "Bella Vita CEO": "https://www.amazon.in/dp/B08H26SHRP?ref_=cm_sw_r_apan_dp_MM5AY4XRCRRQ8Z6X6WB8&language=en-IN&th=1",
+    "Beardo wishkey smoke perfume":"https://www.amazon.in/dp/B096XV4HR4?ref_=cm_sw_r_apan_dp_BAT99BCVDDE1DRYQNXVM&language=en-IN",
+    "Beardo Mariner EDP for Men": "https://www.amazon.in/dp/B0BWNGKC2V?ref_=cm_sw_r_apan_dp_XF2NZTQS1VEE5X3HYRR8&language=en-IN",
+    "EMP5 cave":"https://www.amazon.in/dp/B09WRNYVWD?ref_=cm_sw_r_apan_dp_F9X4SG4Y4FBQS0V5VQKN&language=en-IN",
+    "EMP5 pause":"https://www.amazon.in/dp/B09P7M23YB?ref_=cm_sw_r_apan_dp_57YAFWV7M2BVMYJQXA8X&language=en-IN"
+    }
 }

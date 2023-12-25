@@ -9,10 +9,12 @@ from playwright_stealth import stealth_sync
 from selectolax.parser import HTMLParser
 import pandas as pd
 
-SBR_WS_CDP = 'wss://brd-customer-hl_be765d4f-zone-scraping_browser1:hyoour9civ1c@brd.superproxy.io:9222'
+SBR_WS_CDP = "wss://brd-customer-hl_be765d4f-zone-scraping_browser1:hyoour9civ1c@brd.superproxy.io:9222"
 
 proxy_flag = False
-
+global_reviews = "h3[data-hook='dp-global-reviews-header']"
+global_reviews_title = 'span[data-hook="review-title"]'
+global_reviews_star = 'i[data-hook="cmps-review-star-rating"]  span'
 review_body_css = '[data-hook="review-body"]'
 review_title_css = 'a[data-hook="review-title"]'
 review_ratings_css = 'i[data-hook="review-star-rating"] span'
@@ -22,13 +24,14 @@ pg_in = 10
 retry_url = []
 test_url = 'https://www.amazon.in/ap/signin?openid.pape.max_auth_age=0&openid.return_to=https%3A%2F%2Fwww.amazon.in%2F%3Fref_%3Dnav_ya_signin&openid.identity=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.assoc_handle=inflex&openid.mode=checkid_setup&openid.claimed_id=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.ns=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0'
 test_flag = False
-def get_html(page, page_no, url_, max_retries=3, initial_delay=2):
+def get_html(page, page_no, url_, max_retries=3, initial_delay=5):
     global proxy_flag
     retries = 0
     delay = initial_delay
 
     # Checks the retry count and runs until retries are over
     while retries <= max_retries:
+        time.sleep(2)
         try:
             # Check if retry_url array is not empty
             if retry_url:
@@ -70,9 +73,8 @@ def get_html(page, page_no, url_, max_retries=3, initial_delay=2):
                 return None
             # pasre html content
             html = HTMLParser(page.content())
-            # Clear the retry_url list if any url is there
-            retry_url.clear()
             # return the page source
+            retry_url.clear()
             return html
         except Exception as e:
             # Through exception and retry
@@ -83,6 +85,13 @@ def get_html(page, page_no, url_, max_retries=3, initial_delay=2):
                 time.sleep(delay)
                 delay *= 2  # Exponential backoff
             else:
+                new_url = url_.format(str(page_no))
+                retry_url.append(new_url)
+                print(f"url: {retry_url[0]}")
+                # initiate proxy connection
+                proxy_flag = True
+                # stop execution of current instance
+
                 print("Max retries reached. Giving up.")
                 return None
 
@@ -96,8 +105,9 @@ def map_product(product_mapping):
 
 def format_url(url_):
     # extract asin from the url
-    asin_match = re.search(r'/dp/([A-Z0-9]{10})/', url_)
+    asin_match = re.search(r'/dp/([A-Z0-9]{10})', url_)
     asin = asin_match.group(1)
+    print(asin)
     # format the url for paginatioon
     url = f'https://www.amazon.in/product-reviews/{asin}/ref=cm_cr_arp_d_viewopt_sr?ie=UTF8&filterByStar=positive&reviewerType=all_reviews&pageNumber=1#reviews-filter-bar'
     url = url.replace('pageNumber=1', 'pageNumber={}')
@@ -116,11 +126,14 @@ def parse_html(html):
     reviews = []
     # Find the respective data
     review_title = html.css(review_title_css)
+    # print(review_title)
     review_body = html.css(review_body_css)
+    # print(review_body)
     review_star = html.css(review_ratings_css)
+    # print(review_star)
     # Check if data contains all three fiels
-    if review_body and len(review_body) == len(review_title) == len(review_star):
-        for index in range(len(review_body)):
+    if review_body and len(review_title) == len(review_star):
+        for index in range(len(review_title)):
             rev_title = review_title[index].text().replace("\n", "").strip().split(" ")
             rev_title = " ".join(rev_title[5:]).lstrip(" ")
             rev_body = review_body[index].text().replace("\n", "").strip()
@@ -145,6 +158,42 @@ def parse_html(html):
                     reviews.append(data)
                 else:
                     print(f"Discarding review: {rev_body}")
+        is_global = html.css(global_reviews)
+        if is_global:
+            review_title = html.css(global_reviews_title)
+
+            # print(review_title)
+            review_body = html.css(review_body_css)
+            # print(review_body)
+            review_star = html.css(global_reviews_star)
+            # print(review_star)
+            index_diff = len(review_body) - len(review_title)
+            for index in range(len(review_title)):
+                rev_title = review_title[index].text().replace("\n", "").strip().split(" ")
+                rev_title = " ".join(rev_title[:]).lstrip(" ")
+                rev_body = review_body[index + index_diff].text().replace("\n", "").strip()
+                rev_star = review_star[index].text().replace("\n", "").strip()
+
+                # Check if the review body has at least 5 words
+                if len(rev_body.split()) >= 5 and (not ("{" in rev_body)):
+                    data = {
+                        "rating": rev_star,
+                        "title": rev_title,
+                        "body": rev_body
+                    }
+                    reviews.append(data)
+                else:
+                    if "}" in rev_body:
+                        rev_body_ext = strip_json(rev_body)
+                        data = {
+                            "rating": rev_star,
+                            "title": rev_title,
+                            "body": rev_body_ext
+                        }
+                        reviews.append(data)
+                    else:
+                        print(f"Discarding review: {rev_body}")
+
             # return data as dataframe
         df = pd.DataFrame(reviews)
         return df, len(df)
@@ -182,12 +231,6 @@ def extract_per_page(page, asin, url, product, output_folder):
         start_page = 1
     # iterate over pages for the review scrapping
     for pg in range(start_page, pg_in+1):
-        # # ----------------- Testing retry mechenism ---------------
-        # if pg == 3 and test_flag:
-        #     print("Test started")
-        #     url = test_url
-        #     test_flag = False
-        # # ----------------- Testing retry mechenism ---------------
         html = get_html(page, page_no=pg, url_=url)
         # stop execution is html page source is None
         if html is None:
@@ -214,7 +257,7 @@ def run(product, url, asin, output_folder, proxy):
                 browser = pw.chromium.connect_over_cdp(proxy)
                 print("Proxy started")
                 page = browser.new_page()
-                stealth_sync(page)
+                # stealth_sync(page)
                 extract_per_page(page, asin, url=url, product=product, output_folder=output_folder)
                 browser.close()
                 pw.stop()
@@ -227,7 +270,8 @@ def run(product, url, asin, output_folder, proxy):
             try:
                 browser = pw.chromium.connect_over_cdp(proxy)
                 page = browser.new_page()
-                stealth_sync(page)
+                # stealth_sync(page)
+                print("synced")
                 extract_per_page(page, asin, url=url, product=product, output_folder=output_folder)
                 browser.close()
                 pw.stop()
@@ -239,15 +283,16 @@ def run(product, url, asin, output_folder, proxy):
     # else keep running in Normal mode
     else:
         browser = pw.chromium.launch(headless=False)
+        # browser = pw.chromium.connect_over_cdp(proxy)
         # browser = pw.chromium.launch()
         page = browser.new_page()
         stealth_sync(page)
         extract_per_page(page, asin, url=url, product=product, output_folder=output_folder)
         browser.close()
         pw.stop()
-
+    print("~"*100)
     print(f"Total review: {total_scrapped}")
-
+    print("~" * 100)
 def parse_config(config_file):
     try:
         with open(config_file, 'r') as file:
@@ -274,6 +319,8 @@ def check_url(url_map):
     for prod, link in url_map.items():
         try:
             url, asin = format_url(str(link))
+            print(url)
+            print(asin)
             if url and asin:
                 return True
         except:
@@ -299,6 +346,7 @@ def main(prod_map, output_folder=str(os.getcwd()), proxy=None):
         if "[" and "'" in url:
             url = url.strip("[").strip("]").strip("'")
         run(product=prod, url=url, asin = asin, output_folder=output_folder, proxy=proxy)
+        # time.sleep(10)
         # if retry URL is found the run with retry URL
         if retry_url:
             run(product=prod, url=retry_url[0], asin = asin, output_folder=output_folder, proxy=proxy)
@@ -307,4 +355,5 @@ def main(prod_map, output_folder=str(os.getcwd()), proxy=None):
 
 if __name__ == "__main__":
     url_map = parse_config('config.json')
-    main(url_map)
+    print(url_map)
+    main(url_map,proxy=SBR_WS_CDP, output_folder="/home/akash/Downloads/Digiklap_review/male_perfume")
