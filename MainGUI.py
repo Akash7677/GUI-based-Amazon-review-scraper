@@ -129,12 +129,13 @@ def parse_creds(creds_file):
 
 def run_scrapper_and_paraphraser(config, output_folder):
     ai21, proxy = parse_creds('Credentials.json')
-    print(ai21, proxy)
+    # print(ai21, proxy)
     if (ai21 is None) or (proxy is None):
         print("please check your credentials for proxy or AI21 API......")
         return
     print("Scrapping...............")
     state_chk = run_scraper(config, output_folder, proxy=proxy)
+    # print(state_chk)
     if state_chk:
         print("paraphrasing............")
         main_para(output_folder, API_key=ai21)
