@@ -2,13 +2,14 @@ import json
 import os
 import re
 import time
-import datetime
 from playwright.sync_api import sync_playwright
+from playwright_stealth import stealth_sync
 from selectolax.parser import HTMLParser
 import pandas as pd
-from urllib.parse import urlencode
 
-proxy_flag = False
+SBR_WS_CDP = 'wss://brd-customer-hl_ee8ce368-zone-scraping_browser:jpom7b9qynp6@brd.superproxy.io:9222'
+
+proxy_flag = True
 global_reviews = "h3[data-hook='dp-global-reviews-header']"
 global_reviews_title = 'span[data-hook="review-title"]'
 global_reviews_star = 'i[data-hook="cmps-review-star-rating"]  span'
@@ -19,51 +20,20 @@ sign_in_page_locator = '#ap_email'
 logo = '#nav-logo-sprites'
 pg_in = 10
 retry_url = []
-test_url = 'https://www.amazon.in/ap/signin?openid.pape.max_auth_age=0&openid.return_to=https%3A%2F%2Fwww.amazon.in%2F%3Fref_%3Dnav_ya_signin&openid.identity=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.assoc_handle=inflex&openid.mode=checkid_setup&openid.claimed_id=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.ns=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0'
 test_flag = False
 
-def embed_url(api_key, url):
-    proxy_params = {
-        'api_key': api_key,
-        'url': url
-    }
-    url_e = urlencode(proxy_params)
-    full_url = 'https://proxy.scrapeops.io/v1/?' + url_e
-    return full_url
-
-def is_blocked(page, locator):
-    if not page.is_visible(logo):
-        page.screenshot(path = f"{datetime.datetime.now()}.png")
-        print("~"*100)
-        print("Amazon blocked.... Starting the Proxy.")
-        print("~" * 100)
-        return True
-    return False
-
-def check_proxy(url):
-    if proxy_flag:
-        new_url = embed_url("f56c714b-73ee-4d18-87c9-5048eb4d7e70", url)
-        return new_url
-    else:
-        return url
-
-def get_html(page, page_no, url_, max_retries=3, initial_delay=5, proxy=None):
+def get_html(page, page_no, url_, max_retries=4, initial_delay=5):
     global proxy_flag
     retries = 0
     delay = initial_delay
-
     # Checks the retry count and runs until retries are over
     while retries <= max_retries:
-        # time.sleep(2)
+        time.sleep(2)
         try:
             # Check if retry_url array is not empty
             if retry_url:
                 # Carry on withretry url
-                new_url = retry_url[0]
-                if "https://proxy.scrapeops.io/v1/" not in new_url:
-                    new_url = check_proxy(new_url)
-                else:
-                    new_url = retry_url[0]
+                new_url = retry_url[-1]
             else:
                 matchCase = 'pageNumber={}'
                 # format page number for next iteration, after retry_url is processed
@@ -71,22 +41,18 @@ def get_html(page, page_no, url_, max_retries=3, initial_delay=5, proxy=None):
                     modified_url = re.sub(r'pageNumber=\d*', r'pageNumber={}', url_)
 
                     new_url = modified_url.format(str(page_no))
-                    new_url = check_proxy(new_url)
                     # print(new_url)
                 else:
                     # Continue with normal operation
                     new_url = url_.format(str(page_no))
-                    new_url = check_proxy(new_url)
                     # print(new_url)
-
-            page.goto(new_url, timeout=120000)
-            time.sleep(2)
+            page.goto(new_url)
             # check if got blocked and sign in page is shown
             # if not page.is_visible(logo):
-            blocked = is_blocked(page,logo)
-            if blocked:
+            if not page.is_visible(logo):
+                print("Amazon blocked the ip.... Starting the Proxy.")
                 retry_url.append(new_url)
-                print(f"url: {retry_url[0]}")
+                print(f"retry url: {retry_url[-1]}")
                 # initiate proxy connection
                 proxy_flag = True
                 # stop execution of current instance
@@ -107,11 +73,10 @@ def get_html(page, page_no, url_, max_retries=3, initial_delay=5, proxy=None):
             else:
                 new_url = url_.format(str(page_no))
                 retry_url.append(new_url)
-                print(f"url: {retry_url[0]}")
+                print(f"retry url: {retry_url[-1]}")
                 # initiate proxy connection
                 proxy_flag = True
                 # stop execution of current instance
-
                 print("Max retries reached. Giving up.")
                 return None
 
@@ -127,7 +92,7 @@ def format_url(url_):
     # extract asin from the url
     asin_match = re.search(r'/dp/([A-Z0-9]{10})', url_)
     asin = asin_match.group(1)
-    print(asin)
+    # print(asin)
     # format the url for paginatioon
     url = f'https://www.amazon.in/product-reviews/{asin}/ref=cm_cr_arp_d_viewopt_sr?ie=UTF8&filterByStar=positive&reviewerType=all_reviews&pageNumber=1#reviews-filter-bar'
     url = url.replace('pageNumber=1', 'pageNumber={}')
@@ -235,7 +200,7 @@ def export_to_excel(excel_filename, df):
         # print(f'Excel file created at {os.path.abspath(excel_filename)}')
 
 total_scrapped = 0
-def extract_per_page(page, asin, url, product, output_folder, proxy):
+def extract_per_page(page, asin, url, product, output_folder):
     global total_scrapped, test_flag
     file_name = f'Amz_{asin}_{product}.xlsx'
     file_path = os.path.join(output_folder, file_name)
@@ -251,7 +216,7 @@ def extract_per_page(page, asin, url, product, output_folder, proxy):
         start_page = 1
     # iterate over pages for the review scrapping
     for pg in range(start_page, pg_in+1):
-        html = get_html(page, page_no=pg, url_=url, proxy=None)
+        html = get_html(page, page_no=pg, url_=url)
         # stop execution is html page source is None
         if html is None:
             return
@@ -267,18 +232,17 @@ def extract_per_page(page, asin, url, product, output_folder, proxy):
 
 
 def run(product, url, asin, output_folder, proxy):
-    # start playwright instance
-    # check if needs to run in proxy or normal
+
     if proxy_flag:
         pw = sync_playwright().start()
         # check if needs to start from where execution is stopped
         if retry_url:
             try:
-                browser = pw.chromium.launch(headless=False)
+                browser = pw.chromium.connect_over_cdp(proxy)
                 print("Proxy started")
                 page = browser.new_page()
                 # stealth_sync(page)
-                extract_per_page(page, asin, url=url, product=product, output_folder=output_folder, proxy=None)
+                extract_per_page(page, asin, url=url, product=product, output_folder=output_folder)
                 browser.close()
                 pw.stop()
             except Exception as e:
@@ -288,11 +252,11 @@ def run(product, url, asin, output_folder, proxy):
         # Start normal operation in proxy mode
         else:
             try:
-                browser = pw.chromium.launch(headless=False)
+                browser = pw.chromium.connect_over_cdp(proxy)
                 page = browser.new_page()
                 # stealth_sync(page)
                 print("synced")
-                extract_per_page(page, asin, url=url, product=product, output_folder=output_folder, proxy=None)
+                extract_per_page(page, asin, url=url, product=product, output_folder=output_folder)
                 browser.close()
                 pw.stop()
 
@@ -307,8 +271,8 @@ def run(product, url, asin, output_folder, proxy):
         # browser = pw.chromium.connect_over_cdp(proxy)
         # browser = pw.chromium.launch()
         page = browser.new_page()
-        # stealth_sync(page)
-        extract_per_page(page, asin, url=url, product=product, output_folder=output_folder, proxy=None)
+        stealth_sync(page)
+        extract_per_page(page, asin, url=url, product=product, output_folder=output_folder)
         browser.close()
         pw.stop()
     print("~"*100)
@@ -351,12 +315,12 @@ def check_url(url_map):
 def main(prod_map, output_folder=str(os.getcwd()), proxy=None):
     global total_scrapped
     url_map = prod_map
-    current_date = datetime.datetime.now().date()
+    # current_date = datetime.datetime.now().date()
 
     # Check if the current date is 2024
-    if current_date.year == 2024:
-        print("Error: Compatibility issue with Playwright module. Please update the package.")
-        return False
+    # if current_date.year == 2024:
+    #     print("Error: Compatibility issue with Playwright module. Please update the package.")
+    #     return False
     # print(url_map)
     # Iterate over the number of products, to which data needs to be extracted
     checked = check_url(url_map)
@@ -367,8 +331,6 @@ def main(prod_map, output_folder=str(os.getcwd()), proxy=None):
         if "[" and "'" in url:
             url = url.strip("[").strip("]").strip("'")
         run(product=prod, url=url, asin = asin, output_folder=output_folder, proxy=proxy)
-        # time.sleep(10)
-        # if retry URL is found the run with retry URL
         if retry_url:
             run(product=prod, url=retry_url[0], asin = asin, output_folder=output_folder, proxy=proxy)
         total_scrapped = 0
@@ -376,9 +338,9 @@ def main(prod_map, output_folder=str(os.getcwd()), proxy=None):
 
 if __name__ == "__main__":
     url_map = parse_config('config.json')
-    print(url_map)
+    # print(url_map)
     strtime = time.time()
-    main(url_map, output_folder="/home/vvdn/pythonProject/scrapper_ui/bot/bot/GUI-based-Amazon-review-scraper/bot")
+    main(url_map, proxy=SBR_WS_CDP,output_folder=os.getcwd())
     endtime = time.time()
-    total = endtime-strtime
-    print(total)
+    total = endtime - strtime
+    print(f"Scrappeed in: {total} sec")
