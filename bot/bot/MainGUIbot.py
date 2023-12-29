@@ -1,11 +1,14 @@
+import os
+import subprocess
+
 from PyQt5 import QtCore, QtGui, QtWidgets
-import sys
 from threading import Thread
-import asyncio
-from bot_code import main  # Import your bot code here
+import sys
+# from bot_code import main  # Import your bot code here
 
 
 class Ui_Dialog(object):
+
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
         Dialog.resize(1001, 883)
@@ -62,7 +65,7 @@ class Ui_Dialog(object):
         selected_date = self.dateEdit.date().toString("dd-MM-yyyy")
 
         if not config_file:
-            self.log_to_console("Please enter the path to the config file.")
+            self.write("Please enter the path to the config file.")
             return
 
         # Start the bot in a separate thread to avoid freezing the GUI
@@ -73,7 +76,9 @@ class Ui_Dialog(object):
         # Redirect console output to the UI
         sys.stdout = self
         formatted_date_in = selected_date
-        main(formatted_date_in, config_file)
+        print("11111111")
+        new = os.popen(f"python3 bot_code.py {formatted_date_in} {config_file}").read()
+        print("222222222222")
 
     def write(self, message):
         # Append the message to the console
@@ -87,8 +92,7 @@ class Ui_Dialog(object):
     def flush(self):
         # Process any pending events
         QtWidgets.QApplication.processEvents()
-
-
+# --------------------------------------------------------------------------------------------------------------------
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     Dialog = QtWidgets.QDialog()

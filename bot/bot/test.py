@@ -12,7 +12,6 @@ import telegram.ext
 import logging
 import configparser
 
-
 input_date = sys.argv[1]
 input_config = sys.argv[2]
 # Create a ConfigParser object
