@@ -16,7 +16,7 @@ import traceback
 
 # Create a ConfigParser object
 config = configparser.ConfigParser()
-config.read('config.ini')
+config.read('config_test.ini')
 
 # Fetch configuration from ini file
 chat_id = int(config.get('Telegram', 'chat_id'))

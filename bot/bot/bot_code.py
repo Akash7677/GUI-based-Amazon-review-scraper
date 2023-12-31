@@ -19,7 +19,7 @@ input_config = sys.argv[2]
 def load_conf(configfile):
     config = configparser.ConfigParser()
     var = config.read(configfile)
-    print(var)
+    # print(var)
     return config
 
 # Set up CLI configuration
@@ -339,9 +339,9 @@ def format_date(date_in):
 # Main code
 def main(config_file, date_in=None):
     # print(config_file)
-    print("ttttttttttt")
+    # print("ttttttttttt")
     config = load_conf(config_file)
-    print(config)
+    # print(config)
     # config.read(config_file)
     # Fetch configuration from ini file
     chat_id = int(config.get('Telegram', 'chat_id'))
@@ -395,13 +395,15 @@ def main(config_file, date_in=None):
             print(f"empty cell_indexes for {cell_indexes_cust}")
         batch_update_cells(sheet=review_sheet_obj, cell_updates=cell_indexes_rev, sheet_name="Reviews Sheet")
         batch_update_cells(sheet=customer_sheet_obj, cell_updates=cell_indexes_cust, sheet_name="Customer Data Sheet")
-        os.remove(os.path.join(os.getcwd(), review_file_xlsx))
+        if os.path.exists(review_file_xlsx):
+            os.remove(os.path.join(os.getcwd(), review_file_xlsx))
     except Exception as e:
         # traceback.print_exc()
         print("Update following cells in respective GoogleSheets if code exited unexpectedly")
         print(f"Update review sheet at index {mark_review_cell}")
         print(f"Update review sheet at index {mark_customer_cell}")
-        os.remove(os.path.join(os.getcwd(), review_file_xlsx))
+        if os.path.exists(review_file_xlsx):
+            os.remove(os.path.join(os.getcwd(), review_file_xlsx))
 
 
 def set_up_logger():
