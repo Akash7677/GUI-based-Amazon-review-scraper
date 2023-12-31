@@ -1,10 +1,5 @@
-import os
-import subprocess
-
 from PyQt5 import QtCore, QtGui, QtWidgets
-from threading import Thread
 import sys
-# from bot_code import main  # Import your bot code here
 
 
 class Ui_Dialog(object):
@@ -32,6 +27,7 @@ class Ui_Dialog(object):
         self.startBotBtn.setObjectName("startBotBtn")
         self.dateEdit = QtWidgets.QDateEdit(Dialog)
         self.dateEdit.setGeometry(QtCore.QRect(150, 160, 111, 41))
+        self.dateEdit.setDisplayFormat("dd-MM-yyyy")
         self.dateEdit.setObjectName("dateEdit")
         self.label = QtWidgets.QLabel(Dialog)
         self.label.setGeometry(QtCore.QRect(40, 170, 141, 17))
@@ -46,7 +42,7 @@ class Ui_Dialog(object):
 
     def retranslateUi(self, Dialog):
         _translate = QtCore.QCoreApplication.translate
-        Dialog.setWindowTitle(_translate("Dialog", "Digiklap - Web Scraper UI"))
+        Dialog.setWindowTitle(_translate("Dialog", "Digiklap - Telegram Review bot"))
         self.configFileInputBox.setToolTip(_translate("Dialog", "Path to the config file"))
         self.configLabel.setText(_translate("Dialog", "Config File Location"))
         self.configBrowse.setToolTip(_translate("Dialog", "Browse for config file"))
@@ -68,17 +64,24 @@ class Ui_Dialog(object):
             self.write("Please enter the path to the config file.")
             return
 
-        # Start the bot in a separate thread to avoid freezing the GUI
-        bot_thread = Thread(target=self.run_bot, args=(config_file, selected_date))
-        bot_thread.start()
+            # Start the bot using QProcess
+        self.bot_process = QtCore.QProcess()
+        self.bot_process.setProcessChannelMode(QtCore.QProcess.MergedChannels)
+        self.bot_process.readyReadStandardOutput.connect(self.read_bot_output)
+        self.bot_process.finished.connect(self.bot_finished)
 
-    def run_bot(self, config_file, selected_date):
-        # Redirect console output to the UI
-        sys.stdout = self
-        formatted_date_in = selected_date
-        print("11111111")
-        new = os.popen(f"python3 bot_code.py {formatted_date_in} {config_file}").read()
-        print("222222222222")
+        # Run the bot in a separate process
+        self.bot_process.start(f"python3 bot_code.py {selected_date} {config_file}")
+
+    def read_bot_output(self):
+        # Read and update the console with the output
+        output = self.bot_process.readAllStandardOutput().data().decode('utf-8')
+        self.write(output)
+
+    def bot_finished(self, exit_code, exit_status):
+        # Update the console when the bot process finishes
+        self.write(f"Bot process finished with exit code: {exit_code}")
+
 
     def write(self, message):
         # Append the message to the console

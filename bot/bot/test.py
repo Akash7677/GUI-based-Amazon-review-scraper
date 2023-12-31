@@ -1,9 +1,14 @@
+import traceback
+from PyQt5 import QtCore, QtGui, QtWidgets
 import os
 import datetime
 import sys
 import time
 import gspread
 import openpyxl
+from PyQt5.QtCore import QCoreApplication, QObject, pyqtSignal
+from PyQt5.QtGui import QTextCursor
+from PyQt5.QtWidgets import QDialog, QApplication
 from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
 import telegram
@@ -12,9 +17,140 @@ import telegram.ext
 import logging
 import configparser
 
-input_date = sys.argv[1]
-input_config = sys.argv[2]
-# Create a ConfigParser object
+class CustomTextWidgetStream(QObject):
+    message_written = pyqtSignal(str)
+    def __init__(self, text_widget):
+        super().__init__()
+        self.text_widget = text_widget
+
+    def write(self, message):
+        self.message_written.emit(message)
+
+    def append_text(self, message):
+        cursor = self.text_widget.textCursor()
+        cursor.movePosition(QTextCursor.End)
+        self.text_widget.insertPlainText(message)
+
+        # Scroll to the end of the document
+        scroll_bar = self.text_widget.verticalScrollBar()
+        scroll_bar.setValue(scroll_bar.maximum())
+
+    def flush(self):
+        QCoreApplication.processEvents()
+
+
+class Telegram_Bot(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.ui = Ui_Dialog()
+        self.ui.setupUi(self)
+        self.custom_stream = CustomTextWidgetStream(self.ui.consolTextEdit)
+        self.custom_stream.message_written.connect(self.append_console_text)
+        # self.custom_stream.message_written.connect(lambda message: self.ui.consolTextEdit.insertPlainText(message))
+        # sys.stdout = self.custom_stream
+
+        # Connect buttons to functions
+        self.ui.configBrowse.clicked.connect(self.browse_config)
+        self.ui.startBotBtn.clicked.connect(self.start_bot)
+        # Redirect console output
+
+
+    def append_console_text(self, message):
+        self.ui.consolTextEdit.append(message)
+
+    def browse_config(self):
+        file_selected, _ = QtWidgets.QFileDialog.getOpenFileName(None, "Select Config File", "", "Config Files (*.ini)")
+        self.ui.configFileInputBox.setPlainText(file_selected)
+
+    def start_bot(self):
+        config_file = self.ui.configFileInputBox.toPlainText()
+        selected_date = self.ui.dateEdit.date().toString("dd-MM-yyyy")
+
+        if not config_file:
+            print("Please enter the path to the config file.")
+            return
+        loop = asyncio.new_event_loop()
+        loop.run_until_complete(self.run_bot(config_file,selected_date))
+        # bot_thread = Thread(target=self.run_bot, args=(config_file, selected_date))
+        # bot_thread.start()
+
+    async def run_bot(self, config_file, selected_date):
+
+        # Redirect console output to the UI
+        # sys.stdout = self.custom_stream
+        formatted_date_in = selected_date
+        self.append_console_text("11111111")
+        try:
+            # Run the bot in the existing event loop
+            await main(config_file, selected_date)
+        except Exception as e:
+            # Log any exceptions
+            traceback.print_exc()
+            print(f"Error in bot execution: {e}")
+
+        print("222222222222")
+
+class Ui_Dialog(object):
+    def setupUi(self, Dialog):
+        Dialog.setObjectName("Dialog")
+        Dialog.resize(1001, 883)
+        self.configFileInputBox = QtWidgets.QPlainTextEdit(Dialog)
+        self.configFileInputBox.setGeometry(QtCore.QRect(150, 100, 741, 31))
+        self.configFileInputBox.setObjectName("configFileInputBox")
+        self.configLabel = QtWidgets.QLabel(Dialog)
+        self.configLabel.setGeometry(QtCore.QRect(10, 100, 151, 31))
+        self.configLabel.setObjectName("configLabel")
+        self.configBrowse = QtWidgets.QPushButton(Dialog)
+        self.configBrowse.setGeometry(QtCore.QRect(900, 100, 89, 31))
+        self.configBrowse.setObjectName("configBrowse")
+        self.consoleLabel = QtWidgets.QLabel(Dialog)
+        self.consoleLabel.setGeometry(QtCore.QRect(10, 260, 71, 20))
+        self.consoleLabel.setObjectName("consoleLabel")
+        self.consolTextEdit = QtWidgets.QTextEdit(Dialog)
+        self.consolTextEdit.setGeometry(QtCore.QRect(10, 290, 981, 581))
+        self.consolTextEdit.setObjectName("consolTextEdit")
+        self.startBotBtn = QtWidgets.QPushButton(Dialog)
+        self.startBotBtn.setGeometry(QtCore.QRect(440, 220, 111, 41))
+        self.startBotBtn.setObjectName("startBotBtn")
+        self.dateEdit = QtWidgets.QDateEdit(Dialog)
+        self.dateEdit.setGeometry(QtCore.QRect(150, 160, 111, 41))
+        self.dateEdit.setObjectName("dateEdit")
+        self.label = QtWidgets.QLabel(Dialog)
+        self.label.setGeometry(QtCore.QRect(40, 170, 141, 17))
+        self.label.setObjectName("label")
+
+
+        self.retranslateUi(Dialog)
+        QtCore.QMetaObject.connectSlotsByName(Dialog)
+
+    def retranslateUi(self, Dialog):
+        _translate = QtCore.QCoreApplication.translate
+        Dialog.setWindowTitle(_translate("Dialog", "Digiklap - Web Scraper UI"))
+        self.configFileInputBox.setToolTip(_translate("Dialog", "Path to the config file"))
+        self.configLabel.setText(_translate("Dialog", "Config File Location"))
+        self.configBrowse.setToolTip(_translate("Dialog", "Browse for config file"))
+        self.configBrowse.setText(_translate("Dialog", "Browse"))
+        self.consoleLabel.setText(_translate("Dialog", "Console:"))
+        self.startBotBtn.setToolTip(_translate("Dialog", "Start the bot"))
+        self.startBotBtn.setText(_translate("Dialog", "Start Bot"))
+        self.label.setText(_translate("Dialog", "Select the date"))
+
+
+
+    def write(self, message):
+        # Append the message to the console
+        cursor = self.consolTextEdit.textCursor()
+        cursor.movePosition(QtGui.QTextCursor.End)
+        cursor.insertText(message)
+        # Scroll to the end of the document
+        scroll_bar = self.consolTextEdit.verticalScrollBar()
+        scroll_bar.setValue(scroll_bar.maximum())
+
+    def flush(self):
+        # Process any pending events
+        QtWidgets.QApplication.processEvents()
+
+
 def load_conf(configfile):
     config = configparser.ConfigParser()
     var = config.read(configfile)
@@ -177,7 +313,7 @@ def fetch_review_offline(prod, excel_file_path, product_mapping):
 async def send(chat, msg, BotToken):
     await telegram.Bot(BotToken).sendMessage(chat_id=chat, text=msg)
 
-def send_review(customer_name, product_review_dict, mobile_num, point_of_contact, date_, order_id, chat_id, BotToken):
+async def send_review(customer_name, product_review_dict, mobile_num, point_of_contact, date_, order_id, chat_id, BotToken):
     global counter
     # Function to send the review to the given chat id along with the formated review
     data1 = customer_name
@@ -193,14 +329,15 @@ def send_review(customer_name, product_review_dict, mobile_num, point_of_contact
         print("~" * 100)
         print("Cool down period of 30 Sec...")
         print("~" * 100)
-        time.sleep(30)
+        await asyncio.sleep(30)
         #log.info("Cool down period of 30 Sec...")
         counter = 0
         # print(f"count = {counter}", flush=True)
         #log.info(f"counter {counter}")
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(send(chat=chat_id, msg=str(formatted_data_f), BotToken=BotToken))
+    # loop = asyncio.get_event_loop()
+    # loop.run_until_complete(send(chat=chat_id, msg=str(formatted_data_f), BotToken=BotToken))
+    await send(chat=chat_id, msg=str(formatted_data_f), BotToken=BotToken)
     for products in product_revs:
         counter += 1
         #log.info(f"counter {counter}")
@@ -213,13 +350,14 @@ def send_review(customer_name, product_review_dict, mobile_num, point_of_contact
             counter = 0
             # print(f"count = {counter}", flush=True)
             #log.info(f"counter {counter}")
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(send(chat=chat_id, msg=str(products), BotToken=BotToken))
+        # loop = asyncio.get_event_loop()
+        # loop.run_until_complete(send(chat=chat_id, msg=str(products), BotToken=BotToken))
+        await send(chat=chat_id, msg=str(products), BotToken=BotToken)
     # asyncio.run(send(chat=chat_id, msg=str(formatted_data_f)))
     #log.info(f"message sent to chat_id: {chat_id} for customer review")
 
 counter = 0
-def fetch_all_product_review(filtered_df, reviewsheet_obj, date_, customersheet_obj, review_file_xlsx, product_mapping, BotToken, chat_id):
+async def fetch_all_product_review(filtered_df, reviewsheet_obj, date_, customersheet_obj, review_file_xlsx, product_mapping, BotToken, chat_id):
     global counter
     print(chat_id)
     # Function to fetch all reviews
@@ -246,7 +384,7 @@ def fetch_all_product_review(filtered_df, reviewsheet_obj, date_, customersheet_
                 review_dict[prod_name] = review_rec
                 # Map the customer name to their review dictionary
             # Send the review
-            send_review(customer_name=customer_name, product_review_dict=review_dict, mobile_num=mobile_no, point_of_contact=point_of_contact, date_=date_, order_id=order_id, BotToken=BotToken, chat_id=chat_id)
+            await send_review(customer_name=customer_name, product_review_dict=review_dict, mobile_num=mobile_no, point_of_contact=point_of_contact, date_=date_, order_id=order_id, BotToken=BotToken, chat_id=chat_id)
             time.sleep(0.5)
             # Get the customer index based on unique order id
             cust_index = get_customer_row_index(customersheet_obj=customersheet_obj, order_id=order_id)
@@ -336,9 +474,10 @@ def format_date(date_in):
 
 # --------------------------------------------------------------------------------------------------------------------
 # Main code
-def main(config_file, date_in=None):
-    # print(config_file)
+async def main(config_file, date_in=None):
     print("ttttttttttt")
+    # print(config_file)
+
     config = load_conf(config_file)
     print(config)
     # config.read(config_file)
@@ -362,46 +501,47 @@ def main(config_file, date_in=None):
     review_sheet_obj = review_sheet.worksheet(review_sheet_name)
     review_file_xlsx = 'review_offline.xlsx'
     formatted_date = format_date(date_in)
-    try:
-        all_df = read_worksheet(customersheet_obj=customer_sheet_obj)
-        filtered_df = filter_data_on_date(all_df, str(formatted_date))
-        if filtered_df is None:
-            loop = asyncio.get_event_loop()
-            loop.run_until_complete(send(chat=chat_id, msg=f"No Customer left for the given date: {date_in}\n or Date does not exists in the sheet", BotToken=BotToken))
-            # asyncio.run()
+    # try:
+    all_df = read_worksheet(customersheet_obj=customer_sheet_obj)
+    filtered_df = filter_data_on_date(all_df, str(formatted_date))
+    if filtered_df is None:
+        # loop = asyncio.get_event_loop()
+        await send(chat=chat_id, msg=f"No Customer left for the given date: {date_in}\n or Date does not exists in the sheet", BotToken=BotToken)
+        # asyncio.run()
 
-            print(f"No Customer left for the given date: {date_in} or Date does not exists in the sheet")
-            #log.info(f"No Customer left for the given date: {date_in} or Date does not exists in the sheet")
-            exit()
-        filtered_df_dict = filtered_df.to_dict(orient='records')
-        fetch_all_product_review(filtered_df_dict, reviewsheet_obj=review_sheet_obj, date_=str(formatted_date), customersheet_obj=customer_sheet_obj, BotToken=BotToken,chat_id=chat_id,product_mapping=product_mapping, review_file_xlsx=review_file_xlsx)
-        #log.info(f"review_cell markings {mark_review_cell}")
-        #log.info(f"review_cell markings {mark_customer_cell}")
+        print(f"No Customer left for the given date: {date_in} or Date does not exists in the sheet")
+        #log.info(f"No Customer left for the given date: {date_in} or Date does not exists in the sheet")
+        exit()
+    filtered_df_dict = filtered_df.to_dict(orient='records')
+    await fetch_all_product_review(filtered_df_dict, reviewsheet_obj=review_sheet_obj, date_=str(formatted_date), customersheet_obj=customer_sheet_obj, BotToken=BotToken,chat_id=chat_id,product_mapping=product_mapping, review_file_xlsx=review_file_xlsx)
+    #log.info(f"review_cell markings {mark_review_cell}")
+    #log.info(f"review_cell markings {mark_customer_cell}")
 
-        print("~" * 100)
-        print("~"*30, "All data fetched","~"*30)
-        print("~" * 100)
-        print("~"*30, "Review Sheet indexes","~"*30)
-        print(mark_review_cell)
-        print("~" * 100)
-        print("~" * 30, "Customer Sheet indexes", "~" * 30)
-        print(mark_customer_cell)
-        cell_indexes_rev= convert_to_update_requests(mark_review_cell)
-        if len(cell_indexes_rev) == 0:
-            print(f"empty cell_indexes for {cell_indexes_rev}")
-        cell_indexes_cust = convert_to_update_requests(mark_customer_cell)
-        if len(cell_indexes_cust) == 0:
-            print(f"empty cell_indexes for {cell_indexes_cust}")
-        batch_update_cells(sheet=review_sheet_obj, cell_updates=cell_indexes_rev, sheet_name="Reviews Sheet")
-        batch_update_cells(sheet=customer_sheet_obj, cell_updates=cell_indexes_cust, sheet_name="Customer Data Sheet")
+    print("~" * 100)
+    print("~"*30, "All data fetched","~"*30)
+    print("~" * 100)
+    print("~"*30, "Review Sheet indexes","~"*30)
+    print(mark_review_cell)
+    print("~" * 100)
+    print("~" * 30, "Customer Sheet indexes", "~" * 30)
+    print(mark_customer_cell)
+    cell_indexes_rev= convert_to_update_requests(mark_review_cell)
+    if len(cell_indexes_rev) == 0:
+        print(f"empty cell_indexes for {cell_indexes_rev}")
+    cell_indexes_cust = convert_to_update_requests(mark_customer_cell)
+    if len(cell_indexes_cust) == 0:
+        print(f"empty cell_indexes for {cell_indexes_cust}")
+    batch_update_cells(sheet=review_sheet_obj, cell_updates=cell_indexes_rev, sheet_name="Reviews Sheet")
+    batch_update_cells(sheet=customer_sheet_obj, cell_updates=cell_indexes_cust, sheet_name="Customer Data Sheet")
+    if os.path.exists(review_file_xlsx):
         os.remove(os.path.join(os.getcwd(), review_file_xlsx))
-    except Exception as e:
-        # traceback.print_exc()
-        print("Update following cells in respective GoogleSheets if code exited unexpectedly")
-        print(f"Update review sheet at index {mark_review_cell}")
-        print(f"Update review sheet at index {mark_customer_cell}")
-        os.remove(os.path.join(os.getcwd(), review_file_xlsx))
-
+    # except Exception as e:
+    #     # traceback.print_exc()
+    #     print("Update following cells in respective GoogleSheets if code exited unexpectedly")
+    #     print(f"Update review sheet at index {mark_review_cell}")
+    #     print(f"Update review sheet at index {mark_customer_cell}")
+    #     if os.path.exists(review_file_xlsx):
+    #         os.remove(os.path.join(os.getcwd(), review_file_xlsx))
 
 def set_up_logger():
     # Setup directories
@@ -421,10 +561,26 @@ def set_up_logger():
     log = logging.getLogger('SheetAutomationService')
     return log
 
-if __name__ == '__main__':
-#     log = set_up_logger()
-#
-#     formatted_date_in = get_date_frm_usr()
-    main(config_file=str(input_config), date_in=str(input_date))
+# if __name__ == '__main__':
+# #     log = set_up_logger()
+# #
+# #     formatted_date_in = get_date_frm_usr()
+#     main(config_file=str(input_config), date_in=str(input_date))
+
+
+
+# --------------------------------------------------------------------------------------------------------------------
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    gui = Telegram_Bot()
+    gui.show()
+    sys.exit(app.exec_())
+
+
+
+
+
+
+
 
 
