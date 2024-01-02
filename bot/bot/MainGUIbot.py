@@ -7,6 +7,22 @@ class Ui_Dialog(object):
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
         Dialog.resize(1001, 883)
+        self.logoLabel = QtWidgets.QLabel(Dialog)
+        self.logoLabel.setGeometry(QtCore.QRect(800, 22, 191, 30))
+        pixmap = QtGui.QPixmap(
+            'logo.png')  # Replace 'path/to/your/logo.png' with the actual path to your logo
+        self.logoLabel.setPixmap(pixmap)
+        self.logoLabel.setScaledContents(True)
+        self.titleLabel = QtWidgets.QLabel(Dialog)
+        self.titleLabel.setGeometry(QtCore.QRect(300, 10, 401, 61))
+        font = QtGui.QFont()
+        font.setPointSize(14)
+        font.setBold(True)
+        font.setWeight(75)
+        self.titleLabel.setFont(font)
+        self.titleLabel.setAlignment(QtCore.Qt.AlignCenter)
+        self.titleLabel.setObjectName("titleLabel")
+        self.titleLabel.setText("Digikap - Telegram bot")
         self.configFileInputBox = QtWidgets.QPlainTextEdit(Dialog)
         self.configFileInputBox.setGeometry(QtCore.QRect(150, 100, 741, 31))
         self.configFileInputBox.setObjectName("configFileInputBox")
