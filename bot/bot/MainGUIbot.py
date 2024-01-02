@@ -69,7 +69,10 @@ class Ui_Dialog(object):
         self.bot_process.setProcessChannelMode(QtCore.QProcess.MergedChannels)
         self.bot_process.readyReadStandardOutput.connect(self.read_bot_output)
         self.bot_process.finished.connect(self.bot_finished)
-
+        # Set PYTHONUNBUFFERED environment variable
+        environment = QtCore.QProcessEnvironment.systemEnvironment()
+        environment.insert("PYTHONUNBUFFERED", "1")
+        self.bot_process.setProcessEnvironment(environment)
         # Run the bot in a separate process
         self.bot_process.start(f"python3 bot_code.py {selected_date} {config_file}")
 
@@ -84,6 +87,8 @@ class Ui_Dialog(object):
 
 
     def write(self, message):
+        if self.consolTextEdit is None:
+            return
         # Append the message to the console
         cursor = self.consolTextEdit.textCursor()
         cursor.movePosition(QtGui.QTextCursor.End)

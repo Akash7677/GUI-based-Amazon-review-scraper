@@ -8,8 +8,7 @@ from selectolax.parser import HTMLParser
 import pandas as pd
 
 SBR_WS_CDP = 'wss://brd-customer-hl_ee8ce368-zone-scraping_browser:jpom7b9qynp6@brd.superproxy.io:9222'
-
-proxy_flag = True
+proxy_flag = False
 global_reviews = "h3[data-hook='dp-global-reviews-header']"
 global_reviews_title = 'span[data-hook="review-title"]'
 global_reviews_star = 'i[data-hook="cmps-review-star-rating"]  span'
