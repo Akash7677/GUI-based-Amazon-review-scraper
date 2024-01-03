@@ -1,6 +1,5 @@
 import os
 import datetime
-import sys
 import time
 import gspread
 import openpyxl
@@ -11,10 +10,8 @@ import asyncio
 import telegram.ext
 import logging
 import configparser
+from datetime import datetime, timedelta
 
-
-input_date = sys.argv[1]
-input_config = sys.argv[2]
 # Create a ConfigParser object
 def load_conf(configfile):
     config = configparser.ConfigParser()
@@ -331,36 +328,34 @@ def batch_update_cells(sheet, cell_updates, sheet_name):
         #log.error(f"func:[batch_update_cells] error: {e} caused unexpected exit ")
 
 def format_date(date_in):
-    parsed_date = datetime.datetime.strptime(date_in, "%d-%m-%Y")
+    parsed_date = datetime.strptime(date_in, "%d-%m-%Y")
     formatted_date = parsed_date.strftime("%Y-%m-%d")
     return formatted_date
 
 # --------------------------------------------------------------------------------------------------------------------
 # Main code
-def main(config_file, date_in=None):
-    # print(config_file)
-    # print("ttttttttttt")
-    config = load_conf(config_file)
-    # print(config)
-    # config.read(config_file)
-    # Fetch configuration from ini file
-    chat_id = int(config.get('Telegram', 'chat_id'))
-    BotToken = config.get('Telegram', 'BotToken').strip()
-    cust_sheet_url = config.get('GoogleSheets', 'customer_sheet').strip()
-    cust_sheet_name = config.get('GoogleSheets', 'cust_sheet_name').strip()
-    review_sheet_url = config.get('GoogleSheets', 'review_sheet').strip()
-    review_sheet_name = config.get('GoogleSheets', 'review_sheet_name').strip()
-    product_mapping_ini = config['ProductMapping']
-    product_mapping = map_product(product_mapping_ini)
+def sub_main(date_in, chat_id, BotToken, product_mapping, customer_sheet_obj, review_sheet_obj):
 
-    scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive',
-             'https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/spreadsheets']
-    creds = ServiceAccountCredentials.from_json_keyfile_name('Cred.json', scope)
-    client = gspread.authorize(creds)
-    sheet = client.open_by_url(cust_sheet_url)
-    customer_sheet_obj = sheet.worksheet(cust_sheet_name)
-    review_sheet = client.open_by_url(review_sheet_url)
-    review_sheet_obj = review_sheet.worksheet(review_sheet_name)
+    # config = load_conf(config_file)
+
+    # Fetch configuration from ini file
+    # chat_id = int(config.get('Telegram', 'chat_id'))
+    # BotToken = config.get('Telegram', 'BotToken').strip()
+    # cust_sheet_url = config.get('GoogleSheets', 'customer_sheet').strip()
+    # cust_sheet_name = config.get('GoogleSheets', 'cust_sheet_name').strip()
+    # review_sheet_url = config.get('GoogleSheets', 'review_sheet').strip()
+    # review_sheet_name = config.get('GoogleSheets', 'review_sheet_name').strip()
+    # product_mapping_ini = config['ProductMapping']
+    # product_mapping = map_product(product_mapping_ini)
+    #
+    # scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive',
+    #          'https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/spreadsheets']
+    # creds = ServiceAccountCredentials.from_json_keyfile_name('Cred.json', scope)
+    # client = gspread.authorize(creds)
+    # sheet = client.open_by_url(cust_sheet_url)
+    # customer_sheet_obj = sheet.worksheet(cust_sheet_name)
+    # review_sheet = client.open_by_url(review_sheet_url)
+    # review_sheet_obj = review_sheet.worksheet(review_sheet_name)
     review_file_xlsx = 'review_offline.xlsx'
     formatted_date = format_date(date_in)
     try:
@@ -373,7 +368,7 @@ def main(config_file, date_in=None):
 
             print(f"No Customer left for the given date: {date_in} or Date does not exists in the sheet")
             #log.info(f"No Customer left for the given date: {date_in} or Date does not exists in the sheet")
-            exit()
+            return
         filtered_df_dict = filtered_df.to_dict(orient='records')
         fetch_all_product_review(filtered_df_dict, reviewsheet_obj=review_sheet_obj, date_=str(formatted_date), customersheet_obj=customer_sheet_obj, BotToken=BotToken,chat_id=chat_id,product_mapping=product_mapping, review_file_xlsx=review_file_xlsx)
         #log.info(f"review_cell markings {mark_review_cell}")
@@ -424,9 +419,71 @@ def set_up_logger():
     log = logging.getLogger('SheetAutomationService')
     return log
 
+def get_dates():
+    date_list = []
+    # Get the current date
+    # current_date = datetime.now()
+    current_date = datetime(2023,11,1)
 
+    # Print the current date in dd-mm-yyyy format
+    print("Current Date:", current_date.strftime("%d-%m-%Y"))
+    date_list.append(current_date.strftime("%d-%m-%Y"))
+    # Print the previous 32 dates
+    for i in range(1, 32):
+        previous_date = current_date - timedelta(days=i)
+        # print(f"Previous Date {i}: {previous_date.strftime('%d-%m-%Y')}")
+        date_list.append(previous_date.strftime("%d-%m-%Y"))
+    return date_list
+
+def scan_for_config_files(path):
+    ini_files = []
+    try:
+        # Walk through the directory and its subdirectories
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                # Check if the file has a .ini extension
+                if file.lower().endswith('.ini'):
+                    # If it does, add the file to the list
+                    ini_files.append(os.path.join(root, file))
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    return ini_files
+
+
+def main():
+    dates = get_dates()
+    configs = scan_for_config_files("/home/vvdn/pythonProject/scrapper_ui/bot/bot/GUI-based-Amazon-review-scraper/bot/bot/configs")
+
+    for config_file in configs:
+        config = load_conf(config_file)
+
+        # Fetch configuration from ini file
+        chat_id = int(config.get('Telegram', 'chat_id'))
+        BotToken = config.get('Telegram', 'BotToken').strip()
+        cust_sheet_url = config.get('GoogleSheets', 'customer_sheet').strip()
+        cust_sheet_name = config.get('GoogleSheets', 'cust_sheet_name').strip()
+        review_sheet_url = config.get('GoogleSheets', 'review_sheet').strip()
+        review_sheet_name = config.get('GoogleSheets', 'review_sheet_name').strip()
+        product_mapping_ini = config['ProductMapping']
+        product_mapping = map_product(product_mapping_ini)
+
+        scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive',
+                 'https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/spreadsheets']
+        creds = ServiceAccountCredentials.from_json_keyfile_name('Cred.json', scope)
+        client = gspread.authorize(creds)
+        sheet = client.open_by_url(cust_sheet_url)
+        customer_sheet_obj = sheet.worksheet(cust_sheet_name)
+        review_sheet = client.open_by_url(review_sheet_url)
+        review_sheet_obj = review_sheet.worksheet(review_sheet_name)
+
+        print(f"for config: {config}")
+        for date in dates:
+            print(f"for date: {date}")
+            sub_main(date_in=date, chat_id=chat_id, BotToken=BotToken, product_mapping=product_mapping, customer_sheet_obj=customer_sheet_obj, review_sheet_obj=review_sheet_obj)
+        print("time dlay....")
+        time.sleep(100)
 
 if __name__ == '__main__':
-    main(config_file=str(input_config), date_in=str(input_date))
+    main()
 
 
